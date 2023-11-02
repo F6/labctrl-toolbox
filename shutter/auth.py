@@ -73,7 +73,7 @@ def create_access_token(user: UserConfig, expires_delta: timedelta | None = None
     to_encode = jsonable_encoder(to_encode)
     jwt_config = config.auth.jwt
     if expires_delta is None:
-        expire = datetime.utcnow() + timedelta(minutes=jwt_config.expire_seconds)
+        expire = datetime.utcnow() + timedelta(seconds=jwt_config.expire_seconds)
     else:
         expire = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire})
