@@ -77,6 +77,7 @@ origins = [
     "http://app.labctrl.org:8080",
     "https://app.labctrl.org:8080",
     "http://localhost:8080",
+    "http://127.0.0.1:8080",
 ]
 
 app.add_middleware(
@@ -149,7 +150,7 @@ async def set_shutter_state(shutter_name: str,
     )
 
 
-@app.websocket("/{shutter_name}/ws")
+@app.websocket("/ws/{shutter_name}")
 async def ws_endpoint(shutter_name: str,
                       websocket: WebSocket):
     try:
