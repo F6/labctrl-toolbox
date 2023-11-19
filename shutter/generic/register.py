@@ -68,7 +68,7 @@ if __name__ == "__main__":
     user_id = uuid.uuid4().__str__()
     new_user = UserConfig(id=user_id, username=username,
                           hashed_password=hashed_password, access_level=access_level)
-    print("Registering new user with following information: ")
+    print("Registering a new user with the following information: ")
     print(new_user.model_dump_json(indent=4))
     ans = input("Is this OK? [y]/n")
     if ans == 'y' or ans == '':

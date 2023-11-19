@@ -127,5 +127,5 @@ class ShutterController:
         elif action is ShutterAction.SWITCH:
             self.switch_shutter(shutter_name)
         else:
-            return ShutterActionResult.SHUTTER_NOT_FOUND
+            return ShutterActionResult.INVALID_ACTION
         return ShutterActionResult.OK

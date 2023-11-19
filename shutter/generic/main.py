@@ -9,7 +9,7 @@ __email__ = "x@zzi.io"
 __version__ = "20231009"
 
 # std libs
-from typing import Annotated
+from typing import Annotated, Optional
 from json import JSONDecodeError
 from contextlib import asynccontextmanager
 # third party libs
@@ -25,6 +25,10 @@ from .shutter import ShutterController, ShutterState, ShutterAction, ShutterActi
 from .config import config, UserAccessLevel
 from .auth import try_authenticate, create_access_token, validate_access_token, Token, TokenData, AccessLevelException
 from .ws import WebSocketConnectionManager
+
+
+class ServerStatusReport(BaseModel):
+    status: str
 
 
 class ShutterChannelOperation(BaseModel):
@@ -63,6 +67,7 @@ if IS_TESTING:
 sc = ShutterController(ser_mgr, shutter_names=config.hardware.shutter_names)
 ws_mgr = WebSocketConnectionManager()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Start ShutterController and corresponding threads
@@ -73,25 +78,23 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-origins = [
-    "http://app.labctrl.org:8080",
-    "https://app.labctrl.org:8080",
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=config.CORS.origins,
+    allow_credentials=config.CORS.allow_credentials,
+    allow_methods=config.CORS.allow_methods,
+    allow_headers=config.CORS.allow_headers,
 )
 
 
 @app.get("/")
 async def get_shutter_list() -> ShutterChannelList:
     return ShutterChannelList(shutter_list=sc.shutter_names)
+
+
+@app.get("/status")
+async def get_server_status() -> ServerStatusReport:
+    return ServerStatusReport(status="OK")
 
 
 @app.post("/token")
@@ -164,7 +167,11 @@ async def ws_endpoint(shutter_name: str,
                 raise AccessLevelException
             op_result = sc.shutter_action(shutter_name, op.action)
             # tell operating client result of operation.
-            await websocket.send_json({"result": op_result.value})
+            response_data = {}
+            response_data["result"] = op_result.value
+            if "id" in data:
+                response_data["id"] = data["id"]
+            await websocket.send_json(response_data)
             # because the shutter is a shared resource of all clients, broadcast the newest state to all clients.
             await ws_mgr.broadcast(jsonable_encoder(ShutterStateReport(
                 shutter_name=shutter_name,
@@ -183,7 +190,7 @@ async def ws_endpoint(shutter_name: str,
     except AccessLevelException:
         # user input is legal and the user is good, but the user does not have the permission to perform the operation.
         await websocket.send_json({"error": "Insufficient Access Level"})
-        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)  
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
     finally:
         # clear websocket stored in manager as well as its auth info.
         ws_mgr.disconnect(websocket)

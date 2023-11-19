@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-labctrl/servers/shutter:
+labctrl/toolbox/shutter/generic:
 
 ## Introduction
 
@@ -12,11 +12,7 @@ Several interfaces are provided:
 
 2. WebSocket RPC interface for time-critical operations.
 
-To load the server application, setup SECRET in config.json, and run at root directory of labctrl:
-
-(fastapi) $ uvicorn servers.shutter.main:app
-
-or use the server loader.
+See readme.md in parent directory for usage documentation.
 
 ## Package
 
@@ -41,4 +37,4 @@ __author__ = "Zhi Zi"
 __email__ = "x@zzi.io"
 __version__ = "20231009"
 
-from .shutter import ShutterController
+from .shutter import ShutterController, ShutterState, ShutterAction, ShutterActionResult

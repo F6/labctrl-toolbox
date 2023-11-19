@@ -1,0 +1,21 @@
+{
+  "restful": {
+    "protocol": "http://",
+    "host": "app.labctrl.org",
+    "port": 8000,
+    "endpoint": "/"
+  },
+  "websocket": {
+    "protocol": "ws://",
+    "host": "app.labctrl.org",
+    "port": 8000,
+    "endpoint": "/ws/"
+  },
+  "authentication": {
+    "username": "shutter",
+    "password": "",
+    "access_token": "",
+    "token_type": "bearer",
+    "force_reauthentication": false
+  }
+}

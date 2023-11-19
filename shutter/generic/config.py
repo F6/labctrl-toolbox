@@ -46,6 +46,13 @@ class AuthConfig(BaseModel):
     jwt: JWTConfig
 
 
+class CORSConfig(BaseModel):
+    origins: list[str]
+    allow_credentials: bool
+    allow_methods: list[str]
+    allow_headers: list[str]
+
+
 class SerialConfig(BaseModel):
     port: str
     timeout: float
@@ -59,6 +66,7 @@ class HardwareConfig(BaseModel):
 
 class ApplicationConfig(BaseModel):
     auth: AuthConfig
+    CORS: CORSConfig
     hardware: HardwareConfig
 
 
