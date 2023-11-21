@@ -1,0 +1,7 @@
+{
+    "mocked_serial": {
+        "port": "COM5",
+        "baudrate": 115200,
+        "timeout": 1.0
+    }
+}

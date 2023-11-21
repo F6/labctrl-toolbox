@@ -1,0 +1,18 @@
+{
+  "restful": {
+    "protocol": "http://",
+    "host": "app.labctrl.org",
+    "port": 8000,
+    "endpoint": "/"
+  },
+  "websocket": {
+    "protocol": "ws://",
+    "host": "app.labctrl.org",
+    "port": 8000,
+    "endpoint": "/ws"
+  },
+  "authentication": {
+    "username": "linearstage",
+    "password": ""
+  }
+}

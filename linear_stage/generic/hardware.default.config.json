@@ -1,0 +1,28 @@
+{
+    "serial": {
+        "port": "COM1",
+        "timeout": 1.0,
+        "baudrate": 115200
+    },
+    "stage": {
+        "velocity": {
+            "value": 100.0,
+            "unit": "mm/s"
+        },
+        "acceleration": {
+            "value": 100.0,
+            "unit": "mm/(s^2)"
+        },
+        "unit_step": {
+            "value": 1.0,
+            "unit": "um"
+        },
+        "soft_limit": {
+            "minimum": -1000000,
+            "maximum": 1000000
+        },
+        "default_position": {
+            "value": 0
+        }
+    }
+}

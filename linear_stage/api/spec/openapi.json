@@ -1,0 +1,491 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "FastAPI", "version": "0.1.0" },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Get Resource Names",
+        "operationId": "get_resource_names__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServerResourceNames" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Stage Operation",
+        "operationId": "stage_operation__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StageOperation" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageOperationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "OAuth2PasswordBearer": [] }]
+      }
+    },
+    "/status": {
+      "get": {
+        "summary": "Get Server Status",
+        "operationId": "get_server_status_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServerStatusReport" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/token": {
+      "post": {
+        "summary": "Login For Access Token",
+        "operationId": "login_for_access_token_token_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_login_for_access_token_token_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Token" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/position": {
+      "get": {
+        "summary": "Get Position",
+        "operationId": "get_position_position_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StagePosition" }
+              }
+            }
+          }
+        },
+        "security": [{ "OAuth2PasswordBearer": [] }]
+      },
+      "post": {
+        "summary": "Set Position",
+        "operationId": "set_position_position_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StagePosition" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageOperationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "OAuth2PasswordBearer": [] }]
+      }
+    },
+    "/absolute_position": {
+      "get": {
+        "summary": "Get Absolute Position",
+        "operationId": "get_absolute_position_absolute_position_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StageDisplacement" }
+              }
+            }
+          }
+        },
+        "security": [{ "OAuth2PasswordBearer": [] }]
+      },
+      "post": {
+        "summary": "Set Absolute Position",
+        "operationId": "set_absolute_position_absolute_position_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StageDisplacement" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageOperationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "OAuth2PasswordBearer": [] }]
+      }
+    },
+    "/velocity": {
+      "get": {
+        "summary": "Get Velocity",
+        "operationId": "get_velocity_velocity_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StageVelocity" }
+              }
+            }
+          }
+        },
+        "security": [{ "OAuth2PasswordBearer": [] }]
+      },
+      "post": {
+        "summary": "Set Velocity",
+        "operationId": "set_velocity_velocity_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StageVelocity" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageOperationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "OAuth2PasswordBearer": [] }]
+      }
+    },
+    "/acceleration": {
+      "get": {
+        "summary": "Get Acceleration",
+        "operationId": "get_acceleration_acceleration_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StageAcceleration" }
+              }
+            }
+          }
+        },
+        "security": [{ "OAuth2PasswordBearer": [] }]
+      },
+      "post": {
+        "summary": "Set Acceleration",
+        "operationId": "set_acceleration_acceleration_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StageAcceleration" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageOperationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "OAuth2PasswordBearer": [] }]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_login_for_access_token_token_post": {
+        "properties": {
+          "grant_type": {
+            "anyOf": [
+              { "type": "string", "pattern": "password" },
+              { "type": "null" }
+            ],
+            "title": "Grant Type"
+          },
+          "username": { "type": "string", "title": "Username" },
+          "password": { "type": "string", "title": "Password" },
+          "scope": { "type": "string", "title": "Scope", "default": "" },
+          "client_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Client Secret"
+          }
+        },
+        "type": "object",
+        "required": ["username", "password"],
+        "title": "Body_login_for_access_token_token_post"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": { "$ref": "#/components/schemas/ValidationError" },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LinearStageActionResult": {
+        "type": "string",
+        "enum": [
+          "OK",
+          "error_generic",
+          "warn_no_action",
+          "soft_limit_exceeded",
+          "serial_RW_failure",
+          "invalid_action",
+          "response_validation_failure"
+        ],
+        "title": "LinearStageActionResult"
+      },
+      "ServerResourceNames": {
+        "properties": {
+          "resources": {
+            "items": { "type": "string" },
+            "type": "array",
+            "title": "Resources"
+          }
+        },
+        "type": "object",
+        "required": ["resources"],
+        "title": "ServerResourceNames"
+      },
+      "ServerStatusReport": {
+        "properties": { "status": { "type": "string", "title": "Status" } },
+        "type": "object",
+        "required": ["status"],
+        "title": "ServerStatusReport"
+      },
+      "StageAcceleration": {
+        "properties": {
+          "value": { "type": "number", "title": "Value" },
+          "unit": { "$ref": "#/components/schemas/StageAccelerationUnit" }
+        },
+        "type": "object",
+        "required": ["value", "unit"],
+        "title": "StageAcceleration"
+      },
+      "StageAccelerationUnit": {
+        "type": "string",
+        "enum": ["nm/(s^2)", "um/(s^2)", "mm/(s^2)", "m/(s^2)"],
+        "title": "StageAccelerationUnit"
+      },
+      "StageDisplacement": {
+        "properties": {
+          "value": { "type": "number", "title": "Value" },
+          "unit": { "$ref": "#/components/schemas/StageDisplacementUnit" }
+        },
+        "type": "object",
+        "required": ["value", "unit"],
+        "title": "StageDisplacement"
+      },
+      "StageDisplacementUnit": {
+        "type": "string",
+        "enum": ["nm", "um", "mm", "m"],
+        "title": "StageDisplacementUnit"
+      },
+      "StageOperation": {
+        "properties": {
+          "position": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/StagePosition" },
+              { "type": "null" }
+            ]
+          },
+          "absolute_position": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/StageDisplacement" },
+              { "type": "null" }
+            ]
+          },
+          "velocity": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/StageVelocity" },
+              { "type": "null" }
+            ]
+          },
+          "acceleration": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/StageAcceleration" },
+              { "type": "null" }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "StageOperation"
+      },
+      "StageOperationResult": {
+        "properties": {
+          "result": { "$ref": "#/components/schemas/LinearStageActionResult" }
+        },
+        "type": "object",
+        "required": ["result"],
+        "title": "StageOperationResult"
+      },
+      "StagePosition": {
+        "properties": { "value": { "type": "integer", "title": "Value" } },
+        "type": "object",
+        "required": ["value"],
+        "title": "StagePosition"
+      },
+      "StageVelocity": {
+        "properties": {
+          "value": { "type": "number", "title": "Value" },
+          "unit": { "$ref": "#/components/schemas/StageVelocityUnit" }
+        },
+        "type": "object",
+        "required": ["value", "unit"],
+        "title": "StageVelocity"
+      },
+      "StageVelocityUnit": {
+        "type": "string",
+        "enum": ["nm/s", "um/s", "mm/s", "m/s"],
+        "title": "StageVelocityUnit"
+      },
+      "Token": {
+        "properties": {
+          "access_token": { "type": "string", "title": "Access Token" },
+          "token_type": { "type": "string", "title": "Token Type" }
+        },
+        "type": "object",
+        "required": ["access_token", "token_type"],
+        "title": "Token"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": { "anyOf": [{ "type": "string" }, { "type": "integer" }] },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": { "type": "string", "title": "Message" },
+          "type": { "type": "string", "title": "Error Type" }
+        },
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": { "password": { "scopes": {}, "tokenUrl": "token" } }
+      }
+    }
+  }
+}
