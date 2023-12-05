@@ -1,0 +1,39 @@
+{
+  "serial": {
+    "port": "COM5",
+    "timeout": 1.0,
+    "baudrate": 115200
+  },
+  "sensor": {
+    "temperature": {
+      "unit_step": {
+        "value": 0.01,
+        "unit": "degC"
+      },
+      "sample_interval": {
+        "value": 100,
+        "unit_step": {
+          "value": 1.0,
+          "unit": "ms"
+        },
+        "minimum": 1,
+        "maximum": 1000
+      }
+    },
+    "humidity": {
+      "unit_step": {
+        "value": 0.01,
+        "unit": "%RH"
+      },
+      "sample_interval": {
+        "value": 100,
+        "unit_step": {
+          "value": 1.0,
+          "unit": "ms"
+        },
+        "minimum": 1,
+        "maximum": 1000
+      }
+    }
+  }
+}

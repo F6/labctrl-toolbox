@@ -1,0 +1,4 @@
+requests >= 2
+pydantic >= 2
+websockets >= 12
+pyjwt >= 2.4.0
