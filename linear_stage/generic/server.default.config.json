@@ -2,7 +2,7 @@
   "auth": {
     "users": [],
     "jwt": {
-      "secret": "ec953bffc571ac31cd1a71fc7faa76b31ff24e5614e004eb42da93aa819547c1",
+      "secret": "",
       "algorithm": "HS256",
       "expire_seconds": 604800
     }

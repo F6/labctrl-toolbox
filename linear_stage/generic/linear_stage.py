@@ -92,7 +92,7 @@ class LinearStageController:
     def command(self, s: str):
         lg.debug("Sending command {}".format(s))
         self.command_id += 1
-        self.ser_mgr.send(s.encode('ascii'), sent_id=self.command_id)
+        self.ser_mgr.send(s.encode('ascii'), message_id=self.command_id)
         # wait for sending confirmation
         t_send, sid_returned = self.ser_mgr.sent_id_queue.get()
         # wait for response

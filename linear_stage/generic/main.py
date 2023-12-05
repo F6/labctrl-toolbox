@@ -191,14 +191,14 @@ async def set_acceleration(operation: StageAcceleration,
 async def ws_endpoint(websocket: WebSocket):
     try:
         await ws_mgr.connect(websocket)
+        # check user priviledge satistified for this endpoint.
+        check_access_level_ws(
+            ws_mgr.active_connections.get(websocket).access_level,
+            UserAccessLevel.standard)
         while True:
             # receive a command, validate the command and execute the command.
             data = await websocket.receive_json()
             op = StageOperation(**data)
-            # check user priviledge
-            check_access_level_ws(
-                ws_mgr.active_connections.get(websocket).access_level,
-                UserAccessLevel.readonly)
             # perform operation
             op_result = sc.stage_operation(op)
             # tell operating client result of operation.
