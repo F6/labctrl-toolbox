@@ -10,12 +10,13 @@ __version__ = "20231205"
 
 # std libs
 import logging
+import asyncio
 # third-party libs
 from fastapi import WebSocket
 from websockets.exceptions import ConnectionClosedOK
 # own package
 from .auth import validate_token_ws, TokenData, check_access_level_ws, UserAccessLevel
-from .linear_stage import StageOperation
+from .linear_stage import StageOperation, DeviceStateUpdateHandler
 from .linear_stage import linear_stage_controller as sc
 lg = logging.getLogger(__name__)
 
@@ -43,7 +44,11 @@ class WSApplicationProtocol():
             check_access_level_ws(self.access_level,
                                   UserAccessLevel.standard)
             result = sc.stage_operation(operation=StageOperation(**received))
-            await self.websocket.send_json({"result": result})
+            response = {"result": result.value}
+            if "id" in received:
+                # if user specifies a id in command, then we response with the same id to indicate task finish.
+                response["id"] = received["id"]
+            await self.websocket.send_json(response)
 
     def stop(self):
         lg.debug(
@@ -121,3 +126,45 @@ class WebSocketConnectionManager:
                 except ConnectionClosedOK:
                     lg.warning(
                         "Client {} closed connection to server while broadcasting, skipping this client".format(wsid))
+
+
+class WSDeviceStateUpdateSender(DeviceStateUpdateHandler):
+    """
+    This class inherites DeviceStateUpdateHandler abstract class to implement
+    the actual state update handler for the device.
+
+    When the state of the linear stage changes (due to some command from one client), 
+    it automatically sends the update to all registered WebSocket clients, 
+    so that they can keep up with other clients without polling for state.
+    """
+
+    def __init__(self, websocket_manager: WebSocketConnectionManager) -> None:
+        self.wsm = websocket_manager
+        self.loop = asyncio.get_event_loop()
+        # if this is turned to False, then send over WS is stopped.
+        self.send_switch = True
+
+    def handle_update(self, update: dict):
+        try:
+            if self.send_switch:
+                future = asyncio.run_coroutine_threadsafe(
+                    self.wsm.broadcast(update), self.loop)
+                # result = future.result(timeout=0.2)
+                result = None # Don't wait for the future, because that would block the main thread.
+                return result
+            else:
+                return None
+        except TimeoutError as e:
+            lg.warning(
+                "Sending message via WS timeout, message discarded: {}".format(update))
+            return None
+        except Exception as e:
+            lg.error(
+                "Unexpected exception occured during handling message, the exception is {}: {}".format(type(e), e))
+            lg.warning(
+                "Remaining data will not be sent via WS to avoid data corruption.")
+            lg.warning(
+                "To recover from this error, try restarting continuous sampling mode.")
+            # turn off send new messages if error happend.
+            self.send_switch = False
+            return None

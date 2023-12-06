@@ -7,7 +7,7 @@ Before running this test, first make sure the server is running.
 
 __author__ = "Zhi Zi"
 __email__ = "x@zzi.io"
-__version__ = "20231115"
+__version__ = "20231205"
 
 # std libs
 import unittest
@@ -79,7 +79,7 @@ class TestGenericServer(unittest.TestCase):
         lg.info("Result: {}".format(result))
         assert "resources" in result
         assert "position" in result["resources"]
-        assert "velocity" in result["resources"]
+        assert "parameter" in result["resources"]
 
     def test_get_position(self):
         lg.info("Requesting to get current position from server")
@@ -128,7 +128,7 @@ class TestGenericServer(unittest.TestCase):
             lg.info("Authentication result: {}".format(result))
             
             lg.info("Setting position via websocket...")
-            action_msg = {"position": {"value": 123456}}
+            action_msg = {"position": 123456}
             action_msg = json.dumps(action_msg)
             conn.send(action_msg)
             result = conn.recv()
@@ -137,7 +137,7 @@ class TestGenericServer(unittest.TestCase):
             lg.info("Additional message: {}".format(result))
             
             lg.info("Setting position via websocket, with command id...")
-            action_msg = {"position": {"value": 654321}, "id": 114514}
+            action_msg = {"position": 654321}
             action_msg = json.dumps(action_msg)
             conn.send(action_msg)
             result = conn.recv()

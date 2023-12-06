@@ -14,6 +14,7 @@ from typing import Annotated
 from json import JSONDecodeError
 from contextlib import asynccontextmanager
 # third party libs
+from websockets.exceptions import ConnectionClosedOK
 from fastapi import Depends, FastAPI, HTTPException, status, WebSocket, WebSocketDisconnect, WebSocketException
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,7 +28,7 @@ from .hardware_config import StageParameter, StagePositionParameter, StageAccele
 from .hardware_config import dump_config_to_file as dump_hardware_config
 from .auth import try_authenticate, create_access_token, validate_access_token, check_access_level
 from .auth import Token, TokenData, AccessLevelException
-from .ws import WebSocketConnectionManager
+from .ws import WebSocketConnectionManager, WSDeviceStateUpdateSender
 
 lg = logging.getLogger(__name__)
 
@@ -53,6 +54,8 @@ ws_mgr = WebSocketConnectionManager()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Attach state update hook to device controller to get websocket notification for state changes.
+    sc.update_hook = WSDeviceStateUpdateSender(ws_mgr)
     # Start LinearStageController and corresponding threads
     sc.start()
     yield
@@ -189,7 +192,7 @@ async def ws_endpoint(websocket: WebSocket):
     try:
         wsid = await ws_mgr.connect(websocket)
         await ws_mgr.run(wsid)
-    except WebSocketDisconnect as e:
+    except (WebSocketDisconnect, ConnectionClosedOK) as e:
         # user disconnected from client side.
         lg.debug(
             "User disconnected from WebSocket connection, normal disconnection: {}".format(e))

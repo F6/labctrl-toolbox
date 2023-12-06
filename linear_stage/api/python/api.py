@@ -73,26 +73,14 @@ class RemoteLinearStage():
         self.authentication_watchdog_thread = threading.Thread(
             target=self.__authentication_watchdog_task)
         #   stage states
-        lg.info("Updating local position state from remote...")
+        lg.info("Updating local state from remote...")
         r = self.rest_get_position()
         self.position: int = r["value"]
-        r = self.rest_get_absolute_position()
-        self.absolute_position: float = r["value"]
-        self.absolute_position_unit: str = r["unit"]
-        r = self.rest_get_velocity()
-        self.velocity: float = r["value"]
-        self.velocity_unit: str = r["unit"]
-        r = self.rest_get_acceleration()
-        self.acceleration: float = r["value"]
-        self.acceleration_unit: str = r["unit"]
+        r = self.rest_get_parameter()
+        self.parameter: dict = r
         lg.info("Current state: ")
         lg.info("    Position: {}".format(self.position))
-        lg.info("    Absolute Position: {} {}".format(
-            self.absolute_position, self.absolute_position_unit))
-        lg.info("    Velocity: {} {}".format(
-            self.velocity, self.velocity_unit))
-        lg.info("    Acceleration: {} {}".format(
-            self.acceleration, self.acceleration_unit))
+        lg.info("    Parameters: {}".format(self.parameter))
         self.stage_state_watchdog_running = False
         self.stage_state_watchdog_thread = threading.Thread(
             target=self.__stage_state_watchdog_task)
@@ -240,15 +228,8 @@ class RemoteLinearStage():
             # poll for stage state every 5 seconds, to keep up with server if other clients changed server states
             r = self.rest_get_position()
             self.position: int = r["value"]
-            r = self.rest_get_absolute_position()
-            self.absolute_position: float = r["value"]
-            self.absolute_position_unit: str = r["unit"]
-            r = self.rest_get_velocity()
-            self.velocity: float = r["value"]
-            self.velocity_unit: str = r["unit"]
-            r = self.rest_get_acceleration()
-            self.acceleration: float = r["value"]
-            self.acceleration_unit: str = r["unit"]
+            r = self.rest_get_parameter()
+            self.parameter: dict = r
             time.sleep(5.0)
 
     def __websocket_handler_task(self):
@@ -280,8 +261,11 @@ class RemoteLinearStage():
             if "id" in r:
                 self.websocket_command_status[r["id"]] = r["result"]
             if "position" in r:
-                if r["position"]:
-                    self.position = r["position"]["value"]
+                self.position = r["position"]
+            if "velocity" in r:
+                self.parameter["velocity"]["value"] = r["velocity"]
+            if "acceleration" in r:
+                self.parameter["acceleration"]["value"] = r["acceleration"]
         except ValueError as e:
             lg.warning("Non-JSON data received, error is {}".format(e))
         except KeyError as e:
@@ -346,17 +330,20 @@ class RemoteLinearStage():
         result = json.loads(response.content.decode())
         return result
 
-    def rest_get_position(self) -> int:
+    def rest_get_position(self) -> dict:
         return self.restful_get("position")
 
-    def rest_get_absolute_position(self) -> int:
+    def rest_get_absolute_position(self) -> dict:
         return self.restful_get("absolute_position")
 
-    def rest_get_velocity(self) -> int:
-        return self.restful_get("velocity")
+    def rest_get_parameter(self) -> dict:
+        return self.restful_get("parameter")
 
-    def rest_get_acceleration(self) -> int:
-        return self.restful_get("acceleration")
+    def rest_get_velocity(self) -> dict:
+        return self.restful_get("parameter/velocity")
+
+    def rest_get_acceleration(self) -> dict:
+        return self.restful_get("parameter/acceleration")
 
     def restful_post(self, resource_name: str, body: dict) -> dict:
         headers = {
@@ -380,11 +367,11 @@ class RemoteLinearStage():
 
     def rest_set_velocity(self, velocity: float, unit: str):
         payload = {"value": velocity, "unit": unit}
-        return self.restful_post(resource_name="velocity", body=payload)
+        return self.restful_post(resource_name="parameter/velocity", body=payload)
 
     def rest_set_acceleration(self, acceleration: float, unit: str):
         payload = {"value": acceleration, "unit": unit}
-        return self.restful_post(resource_name="acceleration", body=payload)
+        return self.restful_post(resource_name="parameter/acceleration", body=payload)
 
     def websocket_command(self, command: dict, cid: int | None = None, timeout: float | None = None) -> int:
         """
@@ -425,7 +412,7 @@ class RemoteLinearStage():
                 time.sleep(0.01)
 
     def set_position(self, position: int, timeout: float | None = None):
-        payload = {"position": {"value": position}}
+        payload = {"position": position}
         return self.websocket_command(command=payload, timeout=timeout)
 
     def set_absolute_position(self, position: float, unit: str = "mm", timeout: float | None = None):

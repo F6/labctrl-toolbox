@@ -8,7 +8,7 @@ This is the unit test for the generic linear_stage hardware API library.
 
 __author__ = "Zhi Zi"
 __email__ = "x@zzi.io"
-__version__ = "20231115"
+__version__ = "20231205"
 
 import unittest
 import os
@@ -18,8 +18,7 @@ import logging
 from serial_helper import SerialManager, SerialMocker
 from logging_helper import TestingLogFormatter
 
-from toolbox.linear_stage.generic import LinearStageController, LinearStageActionResult
-from toolbox.linear_stage.generic.hardware_config import hardware_config
+from toolbox.linear_stage.generic.linear_stage import linear_stage_controller as sc
 from toolbox.linear_stage.generic.unit import StageDisplacementUnit
 # configure root logger to output all logs to stdout
 lg = logging.getLogger()
@@ -35,36 +34,8 @@ lg = logging.getLogger(__name__)
 class TestLinearStageController(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        lg.info(
-            "Setting up SerialManager of LinearStageController with a SerialMocker.")
-        # create LinearStageController that all threads shares according to config.json
-        CONFIG_PATH = os.path.join(os.path.dirname(
-            __file__), 'test_generic_hardware.config.json')
-        with open(CONFIG_PATH, 'r') as f:
-            cfg = json.load(f)
-            ser_cfg = cfg["mocked_serial"]
-
-        ser_mgr = SerialManager(
-            ser_cfg["port"], baudrate=ser_cfg["baudrate"], timeout=ser_cfg["timeout"])
-
-        # mocked response according to our protocol
-        response_map = {
-            b"AUTOHOME\r": b"OK\r",
-        }
-
-        def r(b: bytes) -> bytes:
-            if b'MOVEABS' in b:
-                return b'OK\r'
-            return b''
-
-        # Replace real serial object of ser_mgr with mocked one
-        ser_mgr.ser = SerialMocker(
-            ser_cfg["port"], baudrate=ser_cfg["baudrate"], timeout=ser_cfg["timeout"],
-            response_map=response_map, response_generator=r
-        )
-
-        lg.info("Starting up LinearStageController")
-        cls.sc = LinearStageController(ser_mgr, hardware_config)
+        lg.info("Importing and Starting LinearStageController")
+        cls.sc = sc
         cls.sc.start()
 
     @classmethod

@@ -50,6 +50,7 @@ __version__ = "20231115"
 import logging
 from enum import Enum
 from typing import Optional
+from abc import ABC, abstractmethod
 # third party
 from pydantic import BaseModel, Field
 # this project
@@ -60,6 +61,19 @@ from .unit import StageDisplacementUnit, StageVelocityUnit, StageAccelerationUni
 from .unit import StageDisplacement, StageVelocity, StageAcceleration
 # set up logging
 lg = logging.getLogger(__name__)
+
+
+class DeviceStateUpdateHandler(ABC):
+    """
+    Abstract class, User can implement this class to handle device state update events.
+    The handle_update method is hooked into every device method that changes local state.
+    This is useful when multiple clients are accessing the same device.
+    When one client asked for a state change, for example updating a parameter, other
+    clients can be notified in the handle_update hook.
+    """
+    @abstractmethod
+    def handle_update(self, update: dict):
+        pass
 
 
 class StageOperation(BaseModel):
@@ -85,9 +99,11 @@ class LinearStageActionResult(Enum):
 
 class LinearStageController:
     def __init__(
-            self, ser_mgr: SerialManager, config: HardwareConfig) -> None:
+            self, ser_mgr: SerialManager, config: HardwareConfig, update_hook: DeviceStateUpdateHandler | None = None) -> None:
         self.ser_mgr = ser_mgr
         self.config = config
+        # the update hook can be attached at initialization, or any time later if other components are not ready yet.
+        self.update_hook = update_hook
         # this shallow copy points to dict in config, so that when dumping config, current position is saved
         self.position = config.parameter.position.default_value
         self.command_id: int = 0
@@ -152,9 +168,11 @@ class LinearStageController:
             self.config.parameter.velocity.value, self.config.parameter.velocity.unit_step.unit, StageVelocityUnit.MILIMETER_PER_SECOND)
         r = self.command('MOVEABS {pos:.4f} {speed:.4f}\r'.format(
             pos=abs_pos_in_mm, speed=speed_in_mm_s))
-        self.position = position
-        lg.debug("Response from device: {}".format(r))
         # [TODO]: validate if r is the same as defined in protocol
+        lg.debug("Response from device: {}".format(r))
+        self.position = position
+        if self.update_hook is not None:
+            self.update_hook.handle_update({"position": position})
         return result
 
     def move_to_absolute_position(self, abs_pos: float, unit: StageDisplacementUnit = StageDisplacementUnit.MILIMETER) -> LinearStageActionResult:
@@ -176,6 +194,8 @@ class LinearStageController:
         target_value = int(
             target_value / self.config.parameter.velocity.unit_step.value)
         self.config.parameter.velocity.value = target_value
+        if self.update_hook is not None:
+            self.update_hook.handle_update({"velocity": target_value})
         return LinearStageActionResult.OK
 
     def set_acceleration(self, acceleration: float, unit: StageAccelerationUnit = StageAccelerationUnit.MILIMETER_PER_SECOND_SQUARED) -> LinearStageActionResult:
@@ -184,6 +204,8 @@ class LinearStageController:
         target_value = int(
             target_value / self.config.parameter.acceleration.unit_step.value)
         self.config.parameter.acceleration.value = target_value
+        if self.update_hook is not None:
+            self.update_hook.handle_update({"acceleration": target_value})
         return LinearStageActionResult.OK
 
     def stage_operation(self, operation: StageOperation) -> LinearStageActionResult:
