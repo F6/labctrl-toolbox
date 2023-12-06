@@ -20,7 +20,9 @@ See readme.md in parent directory for usage documentation.
     - unit.py: provides basic unit definitions and conversion tools for physical quantities.
     - main.py: FastAPI application for HTTP API and WebSocket endpoint.
     - auth.py: authentication module for generating and varifying JWTs.
-    - config.py: data model for config.
+    - hardware_config.py: data model for hardware config.
+    - server_config.py: data model for server config.
+    - hardware_mocker: mocks a true device for testing.
     - ws.py: websocket message parsing and responsing module.
 
 ## Scripts
@@ -30,7 +32,6 @@ See readme.md in parent directory for usage documentation.
 
 __author__ = "Zhi Zi"
 __email__ = "x@zzi.io"
-__version__ = "20231115"
+__version__ = "20231205"
 
-from .unit import StageDisplacementUnit, StageVelocityUnit, StageAccelerationUnit
 from .linear_stage import LinearStageController, LinearStageActionResult

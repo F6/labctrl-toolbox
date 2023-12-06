@@ -7,18 +7,18 @@ It also provides methods to load config from config file, or dump config to a fi
 
 __author__ = "Zhi Zi"
 __email__ = "x@zzi.io"
-__version__ = "20231115"
+__version__ = "20231205"
 
 # std libs
 import os
 import json
-from typing import Optional
 # third party libs
 from pydantic import BaseModel
 # this package
-from .unit import StageDisplacementUnit, StageVelocityUnit, StageAccelerationUnit
+from .unit import StageDisplacement, StageVelocity, StageAcceleration
 # meta params and defaults
-HARDWARE_CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'hardware.config.json')
+HARDWARE_CONFIG_PATH = os.path.join(
+    os.path.dirname(__file__), 'hardware.config.json')
 
 
 class SerialConfig(BaseModel):
@@ -27,48 +27,43 @@ class SerialConfig(BaseModel):
     baudrate: int
 
 
-class StagePosition(BaseModel):
-    value: int
-
-
-class StageDisplacement(BaseModel):
-    value: float
-    unit: StageDisplacementUnit
-
-
-class StageVelocity(BaseModel):
-    value: float
-    unit: StageVelocityUnit
-
-
-class StageAcceleration(BaseModel):
-    value: float
-    unit: StageAccelerationUnit
-
-
-class StageOperation(BaseModel):
-    position: Optional[StagePosition] = None
-    absolute_position: Optional[StageDisplacement] = None
-    velocity: Optional[StageVelocity] = None
-    acceleration: Optional[StageAcceleration] = None
-
-
 class StageSoftLimit(BaseModel):
     minimum: int  # use logical position
     maximum: int  # use logical position
 
 
-class StageConfig(BaseModel):
-    velocity: StageVelocity
-    acceleration: StageAcceleration
+class StageVelocityParameter(BaseModel):
+    unit_step: StageVelocity
+    value: int
+    default_value: int
+    minimum: int
+    maximum: int
+
+
+class StageAccelerationParameter(BaseModel):
+    unit_step: StageAcceleration
+    value: int
+    default_value: int
+    minimum: int
+    maximum: int
+
+
+class StagePositionParameter(BaseModel):
     unit_step: StageDisplacement
-    soft_limit: StageSoftLimit
-    default_position: StagePosition  # use logical position
+    default_value: int
+    minimum: int
+    maximum: int
+
+
+class StageParameter(BaseModel):
+    velocity: StageVelocityParameter
+    acceleration: StageAccelerationParameter
+    position: StagePositionParameter
 
 
 class HardwareConfig(BaseModel):
     serial: SerialConfig
-    stage: StageConfig
+    parameter: StageParameter
 
 
 def load_config_from_file(config_path: str = HARDWARE_CONFIG_PATH):

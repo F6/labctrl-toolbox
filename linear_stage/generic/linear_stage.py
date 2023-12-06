@@ -49,14 +49,28 @@ __version__ = "20231115"
 # std libs
 import logging
 from enum import Enum
+from typing import Optional
 # third party
-
+from pydantic import BaseModel, Field
 # this project
 from serial_helper import SerialManager
-from .hardware_config import HardwareConfig, StageDisplacement, StageOperation
-from .unit import stage_unit_converter, StageDisplacementUnit, StageVelocityUnit, StageAccelerationUnit
+from .hardware_config import HardwareConfig, hardware_config
+from .unit import stage_unit_converter
+from .unit import StageDisplacementUnit, StageVelocityUnit, StageAccelerationUnit
+from .unit import StageDisplacement, StageVelocity, StageAcceleration
 # set up logging
 lg = logging.getLogger(__name__)
+
+
+class StageOperation(BaseModel):
+    position: Optional[int] = Field(
+        None, description="Logical value of target position.")
+    absolute_position: Optional[StageDisplacement] = Field(
+        None, description="Absolute position, with a unit.")
+    velocity: Optional[StageVelocity] = Field(
+        None, description="Sets stage velocity, with a unit.")
+    acceleration: Optional[StageAcceleration] = Field(
+        None, description="Sets stage acceleration, with a unit.")
 
 
 class LinearStageActionResult(Enum):
@@ -75,7 +89,7 @@ class LinearStageController:
         self.ser_mgr = ser_mgr
         self.config = config
         # this shallow copy points to dict in config, so that when dumping config, current position is saved
-        self.position = config.stage.default_position
+        self.position = config.parameter.position.default_value
         self.command_id: int = 0
         lg.debug("LinearStageController initialzed.")
 
@@ -101,86 +115,115 @@ class LinearStageController:
         # [TODO]
         return response.decode()
 
+    def __warn_no_action(self, value):
+        lg.warning(
+            "Target value is the same as current value {}!".format(
+                value)
+        )
+        lg.warning(
+            "This usually happens when operating beyond the precision of the stage, or system is out of sync. Check docs for more explanation."
+        )
+        lg.warning(
+            "Sending command anyway."
+        )
+
     def move_to_position(self, position: int) -> LinearStageActionResult:
         result = LinearStageActionResult.OK
-        if (position > self.config.stage.soft_limit.maximum) \
-                or (position < self.config.stage.soft_limit.minimum):
+        position_config = self.config.parameter.position
+        if (position > position_config.maximum) \
+                or (position < position_config.minimum):
             lg.error(
                 "Target position exceeds soft limit, target={}, limit=({}, {}).".format(
                     position,
-                    self.config.stage.soft_limit.minimum,
-                    self.config.stage.soft_limit.maximum
+                    position_config.minimum,
+                    position_config.maximum
                 ))
             return LinearStageActionResult.SOFT_LIMIT_EXCEEDED
-        if position == self.position.value:
-            lg.warning(
-                "Target position is the same as current position {}!".format(
-                    position)
-            )
-            lg.warning(
-                "This usually happens when operating beyond the precision of the stage, or system is out of sync. Check docs for more explanation."
-            )
-            lg.warning(
-                "Sending command anyway."
-            )
+        if position == self.position:
+            self.__warn_no_action(position)
             result = LinearStageActionResult.WARN_NO_ACTION
         lg.debug("Moving stage to position {}".format(position))
         # because the stage accepts command in milimeter and second units, convert units before sending command.
         # convert logical position to absolute position
-        abs_pos_value = position * self.config.stage.unit_step.value
+        abs_pos_value = position * position_config.unit_step.value
         abs_pos_in_mm = stage_unit_converter.convert(
-            abs_pos_value, self.config.stage.unit_step.unit, StageDisplacementUnit.MILIMETER)
+            abs_pos_value, position_config.unit_step.unit, StageDisplacementUnit.MILIMETER)
         speed_in_mm_s = stage_unit_converter.convert(
-            self.config.stage.velocity.value, self.config.stage.velocity.unit, StageVelocityUnit.MILIMETER_PER_SECOND)
+            self.config.parameter.velocity.value, self.config.parameter.velocity.unit_step.unit, StageVelocityUnit.MILIMETER_PER_SECOND)
         r = self.command('MOVEABS {pos:.4f} {speed:.4f}\r'.format(
             pos=abs_pos_in_mm, speed=speed_in_mm_s))
-        self.position.value = position
+        self.position = position
         lg.debug("Response from device: {}".format(r))
         # [TODO]: validate if r is the same as defined in protocol
         return result
 
     def move_to_absolute_position(self, abs_pos: float, unit: StageDisplacementUnit = StageDisplacementUnit.MILIMETER) -> LinearStageActionResult:
         target_pos_value = stage_unit_converter.convert(
-            abs_pos, unit, self.config.stage.unit_step.unit
-        )
+            abs_pos, unit, self.config.parameter.position.unit_step.unit)
         target_pos_value = int(
-            target_pos_value / self.config.stage.unit_step.value)
+            target_pos_value / self.config.parameter.position.unit_step.value)
         return self.move_to_position(target_pos_value)
 
     def get_absolute_position(self, unit: StageDisplacementUnit = StageDisplacementUnit.MILIMETER) -> StageDisplacement:
-        abs_pos_value = self.position.value * self.config.stage.unit_step.value
+        abs_pos_value = self.position * self.config.parameter.position.unit_step.value
         abs_pos_value = stage_unit_converter.convert(
-            abs_pos_value, self.config.stage.unit_step.unit, unit)
+            abs_pos_value, self.config.parameter.position.unit_step.unit, unit)
         return StageDisplacement(value=abs_pos_value, unit=unit)
 
     def set_velocity(self, velocity: float, unit: StageVelocityUnit = StageVelocityUnit.MILIMETER_PER_SECOND) -> LinearStageActionResult:
-        self.config.stage.velocity.value = velocity
-        self.config.stage.velocity.unit = unit
+        target_value = stage_unit_converter.convert(
+            velocity, unit, self.config.parameter.velocity.unit_step.unit)
+        target_value = int(
+            target_value / self.config.parameter.velocity.unit_step.value)
+        self.config.parameter.velocity.value = target_value
         return LinearStageActionResult.OK
 
     def set_acceleration(self, acceleration: float, unit: StageAccelerationUnit = StageAccelerationUnit.MILIMETER_PER_SECOND_SQUARED) -> LinearStageActionResult:
-        self.config.stage.acceleration.value = acceleration
-        self.config.stage.acceleration.unit = unit
+        target_value = stage_unit_converter.convert(
+            acceleration, unit, self.config.parameter.acceleration.unit_step.unit)
+        target_value = int(
+            target_value / self.config.parameter.acceleration.unit_step.value)
+        self.config.parameter.acceleration.value = target_value
         return LinearStageActionResult.OK
 
     def stage_operation(self, operation: StageOperation) -> LinearStageActionResult:
-        if (operation.position != None) and (operation.absolute_position != None):
+        # sanity check: Don't provide both position and absolute_position.
+        if operation.position is not None and operation.absolute_position is not None:
             return LinearStageActionResult.INVALID_ACTION
-        r_acc, r_vel, r_pos = LinearStageActionResult.OK, LinearStageActionResult.OK, LinearStageActionResult.OK
-        if operation.acceleration:
-            r_acc = self.set_acceleration(
+        # start of operaiton
+        if operation.acceleration is not None:
+            result = self.set_acceleration(
                 operation.acceleration.value, operation.acceleration.unit)
-        if operation.velocity:
-            r_vel = self.set_velocity(operation.velocity.value,
-                                      operation.velocity.unit)
-        if operation.position:
-            r_pos = self.move_to_position(position=operation.position.value)
-        elif operation.absolute_position:
-            r_pos = self.move_to_absolute_position(
-                abs_pos=operation.absolute_position.value, unit=operation.absolute_position.unit)
-        else:
-            pass
-        if (r_acc is LinearStageActionResult.OK) and (r_pos is LinearStageActionResult.OK) and (r_vel is LinearStageActionResult.OK):
-            return LinearStageActionResult.OK
-        else:
-            return LinearStageActionResult.ERROR_GENERIC
+            if result is not LinearStageActionResult.OK:
+                return result
+        if operation.velocity is not None:
+            result = self.set_velocity(
+                operation.velocity.value, operation.velocity.unit)
+            if result is not LinearStageActionResult.OK:
+                return result
+        if operation.absolute_position is not None:
+            result = self.move_to_absolute_position(
+                operation.absolute_position.value, operation.absolute_position.unit)
+            if result is not LinearStageActionResult.OK:
+                return result
+        if operation.position is not None:
+            result = self.move_to_position(operation.position)
+            if result is not LinearStageActionResult.OK:
+                return result
+        # end of operation, if everthing is OK, return OK.
+        return LinearStageActionResult.OK
+
+
+# create LinearStageController that all threads shares according to config.
+serial_config = hardware_config.serial
+ser_mgr = SerialManager(
+    serial_config.port, baudrate=serial_config.baudrate, timeout=serial_config.timeout)
+
+# ----- FOR TESTING
+IS_TESTING = True
+if IS_TESTING:
+    from .hardware_mocker import mocked_ser
+    ser_mgr.ser = mocked_ser
+# ===== END FOR TESTING
+
+linear_stage_controller = LinearStageController(ser_mgr, hardware_config)
