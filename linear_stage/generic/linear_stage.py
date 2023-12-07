@@ -40,11 +40,19 @@ or other values that can be rounded to 1145.14mm.
 However, because the stage can only operate up to the precision level of 0.01mm, 
 1145.141919810mm or 1145.140000000mm does not make a difference for operating the stage.
 
+*Physical Quantity and Logical Quantity*:
+
+Similar to absolute position and logical position, controlling a device also requires 
+other physical quantities to be represented, such as velocity and acceleration.
+These quantities also can only be measured and constrained to some certain level of
+precision, and if we use the smallest achievable step as the unit step, it is also possible
+to represent the physical quantity precisely as an integer, and we call this representation
+a logical quantity.
 """
 
 __author__ = "Zhi Zi"
 __email__ = "x@zzi.io"
-__version__ = "20231115"
+__version__ = "20231205"
 
 # std libs
 import logging
@@ -77,14 +85,12 @@ class DeviceStateUpdateHandler(ABC):
 
 
 class StageOperation(BaseModel):
-    position: Optional[int] = Field(
-        None, description="Logical value of target position.")
-    absolute_position: Optional[StageDisplacement] = Field(
-        None, description="Absolute position, with a unit.")
-    velocity: Optional[StageVelocity] = Field(
-        None, description="Sets stage velocity, with a unit.")
-    acceleration: Optional[StageAcceleration] = Field(
-        None, description="Sets stage acceleration, with a unit.")
+    position: Optional[int | StageDisplacement] = Field(
+        None, description="Target position, logical value if int, physical value if with a unit.")
+    velocity: Optional[int | StageVelocity] = Field(
+        None, description="Sets stage velocity, logical value if int, physical value if with a unit.")
+    acceleration: Optional[int | StageAcceleration] = Field(
+        None, description="Sets stage acceleration, logical value if int, physical value if with a unit.")
 
 
 class LinearStageActionResult(Enum):
@@ -131,110 +137,189 @@ class LinearStageController:
         # [TODO]
         return response.decode()
 
-    def __warn_no_action(self, value):
-        lg.warning(
-            "Target value is the same as current value {}!".format(
-                value)
-        )
-        lg.warning(
-            "This usually happens when operating beyond the precision of the stage, or system is out of sync. Check docs for more explanation."
-        )
-        lg.warning(
-            "Sending command anyway."
-        )
+    def __compare_identical_and_warn_no_action(self, value_before, value_after) -> bool:
+        """
+        This method is called just before attempting to change a state value.
+        It compares the two values, and if they are the same, fire some warnings in the logging and returns True,
+        because in normal circumstances, people will not call for a change if no change is needed.
+        If the are not the same, returns False.
+        """
+        if value_before == value_after:
+            lg.warning(
+                "Target value is the same as current value {}!".format(
+                    value_before)
+            )
+            lg.warning(
+                "This usually happens when operating beyond the precision of the device, or system is out of sync. Check docs for more explanation."
+            )
+            lg.warning(
+                "Sending command anyway."
+            )
+            return True
+        else:
+            return False
 
-    def move_to_position(self, position: int) -> LinearStageActionResult:
-        result = LinearStageActionResult.OK
-        position_config = self.config.parameter.position
-        if (position > position_config.maximum) \
-                or (position < position_config.minimum):
+    def __check_value_within_limits(self, value, minimum, maximum) -> bool:
+        """
+        This method is called just before attempting to change a state value.
+        It compares the value to be changed with it's limitation.
+        If the value is within the limits, returns True.
+        If the value is out of limits, fire some errors in the logging and returns False.
+        """
+        if (value > maximum) or (value < minimum):
             lg.error(
-                "Target position exceeds soft limit, target={}, limit=({}, {}).".format(
-                    position,
-                    position_config.minimum,
-                    position_config.maximum
+                "Target value exceeds soft limit, target={}, limit=({}, {}).".format(
+                    value,
+                    minimum,
+                    maximum
                 ))
+            return False
+        else:
+            return True
+
+    def get_position(self) -> int:
+        return self.position
+
+    def set_position(self, position: int) -> LinearStageActionResult:
+        result = LinearStageActionResult.OK
+        cfg = self.config.parameter.position
+        if not self.__check_value_within_limits(position, cfg.minimum, cfg.maximum):
             return LinearStageActionResult.SOFT_LIMIT_EXCEEDED
-        if position == self.position:
-            self.__warn_no_action(position)
+        if self.__compare_identical_and_warn_no_action(self.position, position):
             result = LinearStageActionResult.WARN_NO_ACTION
+        # ======== Start of command execution ========
         lg.debug("Moving stage to position {}".format(position))
         # because the stage accepts command in milimeter and second units, convert units before sending command.
         # convert logical position to absolute position
-        abs_pos_value = position * position_config.unit_step.value
+        abs_pos_value = position * cfg.unit_step.value
         abs_pos_in_mm = stage_unit_converter.convert(
-            abs_pos_value, position_config.unit_step.unit, StageDisplacementUnit.MILIMETER)
+            abs_pos_value, cfg.unit_step.unit, StageDisplacementUnit.MILIMETER)
         speed_in_mm_s = stage_unit_converter.convert(
             self.config.parameter.velocity.value, self.config.parameter.velocity.unit_step.unit, StageVelocityUnit.MILIMETER_PER_SECOND)
         r = self.command('MOVEABS {pos:.4f} {speed:.4f}\r'.format(
             pos=abs_pos_in_mm, speed=speed_in_mm_s))
         # [TODO]: validate if r is the same as defined in protocol
         lg.debug("Response from device: {}".format(r))
+        # ======== End of command execution ========
         self.position = position
         if self.update_hook is not None:
             self.update_hook.handle_update({"position": position})
         return result
 
-    def move_to_absolute_position(self, abs_pos: float, unit: StageDisplacementUnit = StageDisplacementUnit.MILIMETER) -> LinearStageActionResult:
-        target_pos_value = stage_unit_converter.convert(
-            abs_pos, unit, self.config.parameter.position.unit_step.unit)
-        target_pos_value = int(
-            target_pos_value / self.config.parameter.position.unit_step.value)
-        return self.move_to_position(target_pos_value)
-
     def get_absolute_position(self, unit: StageDisplacementUnit = StageDisplacementUnit.MILIMETER) -> StageDisplacement:
-        abs_pos_value = self.position * self.config.parameter.position.unit_step.value
-        abs_pos_value = stage_unit_converter.convert(
-            abs_pos_value, self.config.parameter.position.unit_step.unit, unit)
-        return StageDisplacement(value=abs_pos_value, unit=unit)
+        cfg = self.config.parameter.position
+        position = self.position * cfg.unit_step.value
+        position_in_target_unit = stage_unit_converter.convert(
+            position, cfg.unit_step.unit, unit)
+        return StageDisplacement(value=position_in_target_unit, unit=unit)
 
-    def set_velocity(self, velocity: float, unit: StageVelocityUnit = StageVelocityUnit.MILIMETER_PER_SECOND) -> LinearStageActionResult:
-        target_value = stage_unit_converter.convert(
-            velocity, unit, self.config.parameter.velocity.unit_step.unit)
-        target_value = int(
-            target_value / self.config.parameter.velocity.unit_step.value)
+    def set_absolute_position(self, abs_pos: float, unit: StageDisplacementUnit = StageDisplacementUnit.MILIMETER) -> LinearStageActionResult:
+        cfg = self.config.parameter.position
+        target_pos_value = stage_unit_converter.convert(
+            abs_pos, unit, cfg.unit_step.unit)
+        target_pos_value = int(target_pos_value / cfg.unit_step.value)
+        return self.set_position(target_pos_value)
+
+    def get_velocity(self) -> int:
+        return self.config.parameter.velocity.value
+
+    def set_velocity(self, target_value: int) -> LinearStageActionResult:
+        result = LinearStageActionResult.OK
+        cfg = self.config.parameter.velocity
+        if not self.__check_value_within_limits(target_value, cfg.minimum, cfg.maximum):
+            return LinearStageActionResult.SOFT_LIMIT_EXCEEDED
+        if self.__compare_identical_and_warn_no_action(cfg.value, target_value):
+            result = LinearStageActionResult.WARN_NO_ACTION
         self.config.parameter.velocity.value = target_value
+        # ======== Start of setting velocity ========
+        # because CDHD2 we use sends velocity along with position commands, no need for additional commands.
+        # ======== End of setting velocity ========
         if self.update_hook is not None:
             self.update_hook.handle_update({"velocity": target_value})
-        return LinearStageActionResult.OK
+        return result
 
-    def set_acceleration(self, acceleration: float, unit: StageAccelerationUnit = StageAccelerationUnit.MILIMETER_PER_SECOND_SQUARED) -> LinearStageActionResult:
+    def get_physical_velocity(self, unit: StageVelocityUnit = StageVelocityUnit.MILIMETER_PER_SECOND) -> StageVelocity:
+        cfg = self.config.parameter.velocity
+        velocity = cfg.value * cfg.unit_step.value
+        velocity_in_target_unit = stage_unit_converter.convert(
+            velocity, cfg.unit_step.unit, unit)
+        return StageDisplacement(value=velocity_in_target_unit, unit=unit)
+
+    def set_physical_velocity(self, velocity: float, unit: StageVelocityUnit = StageVelocityUnit.MILIMETER_PER_SECOND) -> LinearStageActionResult:
+        cfg = self.config.parameter.velocity
         target_value = stage_unit_converter.convert(
-            acceleration, unit, self.config.parameter.acceleration.unit_step.unit)
-        target_value = int(
-            target_value / self.config.parameter.acceleration.unit_step.value)
+            velocity, unit, cfg.unit_step.unit)
+        target_value = int(target_value / cfg.unit_step.value)
+        return self.set_velocity(target_value)
+
+    def get_acceleration(self) -> int:
+        return self.config.parameter.acceleration.value
+
+    def set_acceleration(self, target_value: int) -> LinearStageActionResult:
+        result = LinearStageActionResult.OK
+        cfg = self.config.parameter.acceleration
+        if not self.__check_value_within_limits(target_value, cfg.minimum, cfg.maximum):
+            return LinearStageActionResult.SOFT_LIMIT_EXCEEDED
+        if self.__compare_identical_and_warn_no_action(cfg.value, target_value):
+            result = LinearStageActionResult.WARN_NO_ACTION
         self.config.parameter.acceleration.value = target_value
+        # ======== Start of setting acceleration ========
+        # because CDHD2 we use sends acceleration along with position commands, no need for additional commands.
+        # ======== End of setting acceleration ========
         if self.update_hook is not None:
             self.update_hook.handle_update({"acceleration": target_value})
-        return LinearStageActionResult.OK
+        return result
+
+    def get_physical_acceleration(self, unit: StageAccelerationUnit = StageAccelerationUnit.MILIMETER_PER_SECOND_SQUARED) -> StageAcceleration:
+        cfg = self.config.parameter.acceleration
+        acceleration = cfg.value * cfg.unit_step.value
+        acceleration_in_target_unit = stage_unit_converter.convert(
+            acceleration, cfg.unit_step.unit, unit)
+        return StageAcceleration(value=acceleration_in_target_unit, unit=unit)
+
+    def set_physical_acceleration(self, acceleration: float, unit: StageAccelerationUnit = StageAccelerationUnit.MILIMETER_PER_SECOND_SQUARED) -> LinearStageActionResult:
+        cfg = self.config.parameter.acceleration
+        target_value = stage_unit_converter.convert(
+            acceleration, unit, cfg.unit_step.unit)
+        target_value = int(target_value / cfg.unit_step.value)
+        return self.set_acceleration(target_value)
 
     def stage_operation(self, operation: StageOperation) -> LinearStageActionResult:
-        # sanity check: Don't provide both position and absolute_position.
-        if operation.position is not None and operation.absolute_position is not None:
-            return LinearStageActionResult.INVALID_ACTION
-        # start of operaiton
-        if operation.acceleration is not None:
-            result = self.set_acceleration(
+        # start of operation. We can only do isinstance like this because python does not has
+        # multiple dispatch support... very ugly but should be clean.
+        all_ok = True
+        if isinstance(operation.acceleration, int):
+            result = self.set_acceleration(operation.acceleration)
+            if result is not LinearStageActionResult.OK:
+                all_ok = False
+        if isinstance(operation.acceleration, StageAcceleration):
+            result = self.set_physical_acceleration(
                 operation.acceleration.value, operation.acceleration.unit)
             if result is not LinearStageActionResult.OK:
-                return result
-        if operation.velocity is not None:
-            result = self.set_velocity(
+                all_ok = False
+        if isinstance(operation.velocity, int):
+            result = self.set_velocity(operation.velocity)
+            if result is not LinearStageActionResult.OK:
+                all_ok = False
+        if isinstance(operation.velocity, StageVelocity):
+            result = self.set_physical_velocity(
                 operation.velocity.value, operation.velocity.unit)
             if result is not LinearStageActionResult.OK:
-                return result
-        if operation.absolute_position is not None:
-            result = self.move_to_absolute_position(
-                operation.absolute_position.value, operation.absolute_position.unit)
+                all_ok = False
+        if isinstance(operation.position, int):
+            result = self.set_position(operation.position)
             if result is not LinearStageActionResult.OK:
-                return result
-        if operation.position is not None:
-            result = self.move_to_position(operation.position)
+                all_ok = False
+        if isinstance(operation.position, StageDisplacement):
+            result = self.set_absolute_position(
+                operation.position.value, operation.position.unit)
             if result is not LinearStageActionResult.OK:
-                return result
+                all_ok = False
         # end of operation, if everthing is OK, return OK.
-        return LinearStageActionResult.OK
-
+        if all_ok:
+            return LinearStageActionResult.OK
+        else:
+            return LinearStageActionResult.ERROR_GENERIC
 
 # create LinearStageController that all threads shares according to config.
 serial_config = hardware_config.serial

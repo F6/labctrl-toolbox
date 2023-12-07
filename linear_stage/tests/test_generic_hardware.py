@@ -49,11 +49,11 @@ class TestLinearStageController(unittest.TestCase):
         lg.info("Testing move_to_position back and forth for 10 rounds")
         for _ in range(10):
             lg.info("Moving to 10000 (10mm)")
-            r = self.sc.move_to_position(10000)
+            r = self.sc.set_position(10000)
             lg.info("Result: {}".format(r))
             lg.info("Current Position: {}".format(self.sc.position))
             lg.info("Moving to -10000 (-10mm)")
-            r = self.sc.move_to_position(-10000)
+            r = self.sc.set_position(-10000)
             lg.info("Result: {}".format(r))
             lg.info("Current Position: {}".format(self.sc.position))
 
@@ -63,28 +63,28 @@ class TestLinearStageController(unittest.TestCase):
         lg.info("Testing move_to_absolute_position back and forth for 10 rounds")
         for _ in range(10):
             lg.info("Moving to 10mm")
-            r = self.sc.move_to_absolute_position(
+            r = self.sc.set_absolute_position(
                 10.0, StageDisplacementUnit.MILIMETER)
             lg.info("Result: {}".format(r))
             lg.info("Current Position: {}".format(self.sc.position))
             lg.info("Moving to -10mm")
-            r = self.sc.move_to_absolute_position(
+            r = self.sc.set_absolute_position(
                 -10.0, StageDisplacementUnit.MILIMETER)
             lg.info("Result: {}".format(r))
             lg.info("Current Position: {}".format(self.sc.position))
         lg.info("Testing over precision command wanrning")
         lg.info("Moving to 10mm")
-        r = self.sc.move_to_absolute_position(
+        r = self.sc.set_absolute_position(
             10.0, StageDisplacementUnit.MILIMETER)
         lg.info("Result: {}".format(r))
         lg.info("Current Position: {}".format(self.sc.position))
         lg.info("Moving to 10.0001 mm")
-        r = self.sc.move_to_absolute_position(
+        r = self.sc.set_absolute_position(
             10.0001, StageDisplacementUnit.MILIMETER)
         lg.info("Result: {}".format(r))
         lg.info("Current Position: {}".format(self.sc.position))
         lg.info("Moving to -10mm")
-        r = self.sc.move_to_absolute_position(-10.0,
+        r = self.sc.set_absolute_position(-10.0,
                                               StageDisplacementUnit.MILIMETER)
         lg.info("Result: {}".format(r))
         lg.info("Current Position: {}".format(self.sc.position))

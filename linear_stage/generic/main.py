@@ -128,7 +128,7 @@ async def get_position(token_data: Annotated[TokenData, Depends(validate_access_
 async def set_position(target: LogicalQuantitiy,
                        token_data: Annotated[TokenData, Depends(validate_access_token)]) -> StageOperationResult:
     check_access_level(token_data.access_level, UserAccessLevel.standard)
-    op_result = sc.move_to_position(target.value)
+    op_result = sc.set_position(target.value)
     return StageOperationResult(result=op_result)
 
 
@@ -142,7 +142,7 @@ async def get_absolute_position(token_data: Annotated[TokenData, Depends(validat
 async def set_absolute_position(operation: StageDisplacement,
                                 token_data: Annotated[TokenData, Depends(validate_access_token)]) -> StageOperationResult:
     check_access_level(token_data.access_level, UserAccessLevel.standard)
-    op_result = sc.move_to_absolute_position(operation.value, operation.unit)
+    op_result = sc.set_absolute_position(operation.value, operation.unit)
     return StageOperationResult(result=op_result)
 
 
@@ -165,10 +165,23 @@ async def get_parameter_velocity(token_data: Annotated[TokenData, Depends(valida
 
 
 @app.post("/parameter/velocity")
-async def set_parameter_velocity(operation: StageVelocity,
+async def set_parameter_velocity(operation: LogicalQuantitiy,
                                  token_data: Annotated[TokenData, Depends(validate_access_token)]) -> StageOperationResult:
     check_access_level(token_data.access_level, UserAccessLevel.standard)
-    op_result = sc.set_velocity(operation.value, operation.unit)
+    op_result = sc.set_velocity(operation.value)
+    return StageOperationResult(result=op_result)
+
+
+@app.get("/parameter/physical_velocity")
+async def get_parameter_physical_velocity(token_data: Annotated[TokenData, Depends(validate_access_token)]) -> StageVelocity:
+    check_access_level(token_data.access_level, UserAccessLevel.readonly)
+    return sc.get_physical_velocity()
+
+
+@app.post("/parameter/physical_velocity")
+async def set_parameter_physical_velocity(operation: StageVelocity, token_data: Annotated[TokenData, Depends(validate_access_token)]) -> StageOperationResult:
+    check_access_level(token_data.access_level, UserAccessLevel.standard)
+    op_result = sc.set_physical_velocity(operation.value, operation.unit)
     return StageOperationResult(result=op_result)
 
 
@@ -177,12 +190,25 @@ async def get_parameter_acceleration(token_data: Annotated[TokenData, Depends(va
     check_access_level(token_data.access_level, UserAccessLevel.readonly)
     return sc.config.parameter.acceleration
 
-
 @app.post("/parameter/acceleration")
-async def set_parameter_acceleration(operation: StageAcceleration,
+async def set_parameter_acceleration(operation: LogicalQuantitiy,
+                                 token_data: Annotated[TokenData, Depends(validate_access_token)]) -> StageOperationResult:
+    check_access_level(token_data.access_level, UserAccessLevel.standard)
+    op_result = sc.set_acceleration(operation.value)
+    return StageOperationResult(result=op_result)
+
+
+@app.get("/parameter/physical_acceleration")
+async def get_parameter_physical_acceleration(token_data: Annotated[TokenData, Depends(validate_access_token)]) -> StageAcceleration:
+    check_access_level(token_data.access_level, UserAccessLevel.readonly)
+    return sc.get_physical_acceleration()
+
+
+@app.post("/parameter/physical_acceleration")
+async def set_parameter_physical_acceleration(operation: StageAcceleration,
                                      token_data: Annotated[TokenData, Depends(validate_access_token)]) -> StageOperationResult:
     check_access_level(token_data.access_level, UserAccessLevel.standard)
-    op_result = sc.set_acceleration(operation.value, operation.unit)
+    op_result = sc.set_physical_acceleration(operation.value, operation.unit)
     return StageOperationResult(result=op_result)
 
 
