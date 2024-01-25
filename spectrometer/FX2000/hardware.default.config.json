@@ -1,0 +1,23 @@
+{
+  "spectrometer": {
+    "integration_time": {
+      "unit_step": {
+        "value": 1,
+        "unit": "ms"
+      },
+      "value": 10,
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "boxcar_width": {
+      "value": 1,
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "average_times": {
+      "value": 1,
+      "minimum": 1,
+      "maximum": 1000
+    }
+  }
+}
