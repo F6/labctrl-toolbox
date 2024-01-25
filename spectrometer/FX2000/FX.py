@@ -16,6 +16,7 @@ __version__ = "20240125"
 
 # std libs
 import logging
+import os
 # third party
 import clr
 # set up logging
@@ -23,8 +24,13 @@ lg = logging.getLogger(__name__)
 
 
 # Add dll reference (pythonnet)
-# clr.AddReference('IdeaOptics') 
-clr.AddReference(r'E:\_PROJECTS\Softwares\labctrl\toolbox\spectrometer\FX2000\IdeaOptics.dll')
+# Because we are loading the application from other root directory, we
+# can either add path of this directory to PATH temporarily, or use absolute path
+# for the dll.
+# clr.AddReference('IdeaOptics')
+DLL_PATH = os.path.join(
+    os.path.dirname(__file__), 'IdeaOptics.dll')
+clr.AddReference(DLL_PATH)
 from IdeaOptics import Wrapper
 
 
