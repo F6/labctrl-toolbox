@@ -64,7 +64,7 @@ class MockedFX2000:
         lg.info("Set integration time: {t}ms".format(t=t))
 
     def set_average_times(self, n):
-        print("Set average times:{n}".format(n=n))
+        lg.info("Set average times:{n}".format(n=n))
 
     def get_spectrum(self):
         spectrum = next(self.mocked_data)
